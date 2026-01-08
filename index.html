@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refleks Yayı: Nöronları Tanıyalım</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;     /* Mavi */
+            --inter: #f39c12;      /* Turuncu/Sarı */
+            --motor: #27ae60;      /* Yeşil */
+            --error: #c0392b;
+            --bg: #ecf0f1;
+            --text-light: #fff;
+            --badge-gold: #f1c40f;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { margin-bottom: 5px; color: var(--primary); }
+        p.sub-text { margin-bottom: 25px; color: #7f8c8d; }
+
+        /* Oyun Alanı */
+        .game-wrapper {
+            position: relative;
+            max-width: 1000px;
+            width: 100%;
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        /* Görsel Alanı */
+        .image-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 30px;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            user-select: none;
+        }
+
+        /* Bırakılacak Alanlar (Drop Zones) */
+        .drop-zone {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .drop-zone.correct {
+            width: auto;
+            height: auto;
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: var(--motor);
+            color: white;
+            border-color: transparent;
+            font-size: 0.9rem;
+            z-index: 20;
+        }
+
+        .drop-zone.hovered {
+            transform: scale(1.15);
+            background: #d6eaf8;
+            border-color: var(--accent);
+        }
+
+        .drop-zone.wrong {
+            background: var(--error);
+            color: white;
+            border-color: var(--error);
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Konumlar (Resme göre) */
+        #zone-receptor { top: 65%; left: 5%; }
+        #zone-sensory { top: 28%; left: 25%; border-color: var(--accent); color: var(--accent); }
+        #zone-inter { top: 12%; left: 45%; border-color: var(--inter); color: var(--inter); }
+        #zone-motor { top: 28%; left: 65%; border-color: var(--motor); color: var(--motor); }
+        #zone-effector { top: 60%; left: 80%; }
+
+
+        /* Sürüklenebilir Etiketler */
+        .labels-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            width: 100%;
+            border: 1px solid #e0e0e0;
+        }
+
+        .draggable {
+            background: white;
+            color: var(--primary);
+            padding: 12px 25px;
+            border: 2px solid var(--primary);
+            border-radius: 30px;
+            cursor: grab;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s, background 0.2s;
+            user-select: none;
+        }
+
+        .draggable:hover {
+            transform: translateY(-3px);
+            background: var(--primary);
+            color: white;
+        }
+
+        .draggable.dragging { opacity: 0.4; }
+
+        /* Başarı Rozeti (Badge) */
+        .success-badge {
+            display: none; /* Başlangıçta gizli */
+            background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+            border: 4px solid var(--badge-gold);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            margin-top: 20px;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .success-badge h3 {
+            color: var(--badge-gold);
+            font-size: 1.5rem;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .success-badge p {
+            font-size: 1.1rem;
+            color: #555;
+            margin: 0;
+        }
+
+        .success-badge .star {
+            font-size: 2rem;
+            color: var(--badge-gold);
+            margin-bottom: 10px;
+        }
+
+        /* İmza (Footer) */
+        .footer-signature {
+            font-size: 0.9rem;
+            color: #95a5a6;
+            margin-top: 5px;
+            font-style: italic;
+            border-top: 1px solid #eee;
+            width: 100%;
+            text-align: center;
+            padding-top: 15px;
+        }
+
+        /* Butonlar ve Mesaj */
+        .controls-area {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        #message-area {
+            font-weight: bold;
+            height: 25px;
+            text-align: center;
+        }
+
+        .reset-btn {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: none;
+        }
+
+        .reset-btn:hover { background-color: #d35400; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            .drop-zone { width: 30px; height: 30px; font-size: 0.9rem; border-width: 2px; }
+            .draggable { padding: 8px 15px; font-size: 0.9rem; }
+            .success-badge h3 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Refleks Yayı Kodlama</h1>
+    <p class="sub-text">Romen rakamları (I, II, III...) ile gösterilen bölgeleri doğru kavramlarla eşleştirin.</p>
+
+    <div class="game-wrapper">
+        <div class="image-container">
+            <img src="114.jpg" alt="Refleks Yayı" draggable="false">
+
+            <div class="drop-zone" id="zone-receptor" data-target="receptor" data-original="I">I</div>
+            <div class="drop-zone" id="zone-sensory" data-target="sensory" data-original="II">II</div>
+            <div class="drop-zone" id="zone-inter" data-target="inter" data-original="III">III</div>
+            <div class="drop-zone" id="zone-motor" data-target="motor" data-original="IV">IV</div>
+            <div class="drop-zone" id="zone-effector" data-target="effector" data-original="V">V</div>
+        </div>
+
+        <div id="message-area"></div>
+
+        <div class="labels-container" id="labels-box">
+            </div>
+
+        <div class="success-badge" id="success-badge">
+            <div class="star">★ ★ ★</div>
+            <h3>Tebrikler!</h3>
+            <p>Refleks Yayı konusunu başarıyla tamamladınız.</p>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #999;">Naci Hoca ile Biyoloji</div>
+        </div>
+
+        <div class="controls-area">
+            <button class="reset-btn" onclick="resetGame()">Oyunu Tekrarla</button>
+        </div>
+        
+        <div class="footer-signature">
+            Tasarım & İçerik: Naci Hoca ile Biyoloji
+        </div>
+    </div>
+
+    <script>
+        // Veri Seti
+        const gameData = [
+            { id: "motor", text: "Motor Nöron", color: "#27ae60" },
+            { id: "receptor", text: "Reseptör", color: "#e74c3c" },
+            { id: "inter", text: "Ara Nöron", color: "#f39c12" },
+            { id: "effector", text: "Efektör", color: "#8e44ad" },
+            { id: "sensory", text: "Duyu Nöronu", color: "#3498db" }
+        ];
+
+        const labelsBox = document.getElementById('labels-box');
+        const dropZones = document.querySelectorAll('.drop-zone');
+        const messageArea = document.getElementById('message-area');
+        const resetBtn = document.querySelector('.reset-btn');
+        const successBadge = document.getElementById('success-badge');
+
+        initGame();
+
+        function initGame() {
+            labelsBox.innerHTML = '';
+            
+            const shuffledData = [...gameData].sort(() => Math.random() - 0.5);
+
+            shuffledData.forEach(item => {
+                const el = document.createElement('div');
+                el.classList.add('draggable');
+                el.setAttribute('draggable', 'true');
+                el.id = item.id;
+                el.textContent = item.text;
+                el.dataset.color = item.color; 
+                
+                el.addEventListener('dragstart', () => el.classList.add('dragging'));
+                el.addEventListener('dragend', () => el.classList.remove('dragging'));
+                
+                labelsBox.appendChild(el);
+            });
+        }
+
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                if (!zone.classList.contains('correct')) zone.classList.add('hovered');
+            });
+
+            zone.addEventListener('dragleave', () => zone.classList.remove('hovered'));
+
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('hovered');
+                
+                if(zone.classList.contains('correct')) return;
+
+                const draggedItem = document.querySelector('.dragging');
+                if(!draggedItem) return;
+
+                const draggedId = draggedItem.id;
+                const targetId = zone.getAttribute('data-target');
+
+                if (draggedId === targetId) {
+                    // DOĞRU
+                    zone.classList.add('correct');
+                    zone.textContent = draggedItem.textContent;
+                    zone.style.backgroundColor = draggedItem.dataset.color; 
+                    
+                    draggedItem.style.display = 'none';
+                    
+                    messageArea.textContent = "✓ Doğru!";
+                    messageArea.style.color = "green";
+                    
+                    checkCompletion();
+                } else {
+                    // YANLIŞ
+                    zone.classList.add('wrong');
+                    messageArea.textContent = "✗ Yanlış!";
+                    messageArea.style.color = "red";
+                    setTimeout(() => {
+                        zone.classList.remove('wrong');
+                        messageArea.textContent = "";
+                    }, 800);
+                }
+            });
+        });
+
+        function checkCompletion() {
+            const total = dropZones.length;
+            const correct = document.querySelectorAll('.drop-zone.correct').length;
+            
+            if(total === correct) {
+                messageArea.textContent = ""; // Yazıyı temizle, rozet konuşsun
+                resetBtn.style.display = "block";
+                labelsBox.style.display = "none"; // Seçenekleri gizle
+                successBadge.style.display = "block"; // ROZETİ GÖSTER
+            }
+        }
+
+        function resetGame() {
+            dropZones.forEach(zone => {
+                zone.classList.remove('correct');
+                zone.style.backgroundColor = '';
+                zone.style.width = '';
+                zone.style.height = '';
+                zone.style.padding = '';
+                zone.textContent = zone.getAttribute('data-original');
+            });
+
+            messageArea.textContent = "";
+            resetBtn.style.display = "none";
+            successBadge.style.display = "none"; // Rozeti gizle
+            labelsBox.style.display = "flex"; // Seçenekleri geri getir
+            initGame();
+        }
+    </script>
+</body>
+</html>
